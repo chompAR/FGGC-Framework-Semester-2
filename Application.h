@@ -130,8 +130,6 @@ private:
 	HRESULT InitVertexBuffer();
 	HRESULT InitIndexBuffer();
 
-	void moveForward(int objectNumber);
-
 public:
 	Application();
 	~Application();

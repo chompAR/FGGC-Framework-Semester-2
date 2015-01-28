@@ -141,20 +141,27 @@ HRESULT Application::Initialise(HINSTANCE hInstance, int nCmdShow)
 	noSpecMaterial.specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	noSpecMaterial.specularPower = 0.0f;
 	
-	GameObject * gameObject = new GameObject("Floor", planeGeometry, noSpecMaterial);
-	gameObject->SetPosition(0.0f, 0.0f, 0.0f);
-	gameObject->SetScale(15.0f, 15.0f, 15.0f);
-	gameObject->SetRotation(XMConvertToRadians(90.0f), 0.0f, 0.0f);
-	gameObject->SetTextureRV(_pGroundTextureRV);
+	Appearance* planeAppearance = new Appearance(planeGeometry, noSpecMaterial);
+	Transform* transform = new Transform();
+	ParticleModel* particleModel = new ParticleModel(transform);
+
+	GameObject * gameObject = new GameObject("Floor", transform, planeAppearance, particleModel);
+	gameObject->GetTransform()->SetPosition(0.0f, 0.0f, 0.0f);
+	gameObject->GetTransform()->SetScale(15.0f, 15.0f, 15.0f);
+	gameObject->GetTransform()->SetRotation(XMConvertToRadians(90.0f), 0.0f, 0.0f);
+	gameObject->GetAppearance()->SetTextureRV(_pGroundTextureRV);
 
 	_gameObjects.push_back(gameObject);
 
+	Appearance* cubeAppearance = new Appearance(cubeGeometry, shinyMaterial);
 	for (auto i = 0; i < 5; i++)
 	{
-		gameObject = new GameObject("Cube " + i, cubeGeometry, shinyMaterial);
-		gameObject->SetScale(0.5f, 0.5f, 0.5f);
-		gameObject->SetPosition(-4.0f + (i * 2.0f), 0.5f, 10.0f);
-		gameObject->SetTextureRV(_pTextureRV);
+		transform = new Transform();
+		particleModel = new ParticleModel(transform);
+		gameObject = new GameObject("Cube " + i, transform, cubeAppearance, particleModel);
+		gameObject->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
+		gameObject->GetTransform()->SetPosition(-4.0f + (i * 2.0f), 0.5f, 10.0f);
+		gameObject->GetAppearance()->SetTextureRV(_pTextureRV);
 
 		_gameObjects.push_back(gameObject);
 	}
@@ -646,13 +653,6 @@ void Application::Cleanup()
 	}
 }
 
-void Application::moveForward(int objectNumber)
-{
-	XMFLOAT3 position = _gameObjects[objectNumber]->GetPosition();
-	position.z -= 0.1f;
-	_gameObjects[objectNumber]->SetPosition(position);
-}
-
 void Application::Update()
 {
     // Update our time
@@ -669,7 +669,7 @@ void Application::Update()
 	// Move gameobject
 	if (GetAsyncKeyState('1'))
 	{
-		moveForward(1);
+		_gameObjects[1]->GetParticleModel()->Move();
 	}
 
 	// Update camera
@@ -733,7 +733,7 @@ void Application::Draw()
 	for (auto gameObject : _gameObjects)
 	{
 		// Get render material
-		Material material = gameObject->GetMaterial();
+		Material material = gameObject->GetAppearance()->GetMaterial();
 
 		// Copy material to shader
 		cb.surface.AmbientMtrl = material.ambient;
@@ -741,12 +741,12 @@ void Application::Draw()
 		cb.surface.SpecularMtrl = material.specular;
 
 		// Set world matrix
-		cb.World = XMMatrixTranspose(gameObject->GetWorldMatrix());
+		cb.World = XMMatrixTranspose(gameObject->GetTransform()->GetWorldMatrix());
 
 		// Set texture
-		if (gameObject->HasTexture())
+		if (gameObject->GetAppearance()->HasTexture())
 		{
-			ID3D11ShaderResourceView * textureRV = gameObject->GetTextureRV();
+			ID3D11ShaderResourceView * textureRV = gameObject->GetAppearance()->GetTextureRV();
 			_pImmediateContext->PSSetShaderResources(0, 1, &textureRV);
 			cb.HasTexture = 1.0f;
 		}
